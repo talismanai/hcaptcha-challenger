@@ -110,8 +110,11 @@ class ImageClassifier(_Reasoner[SCoTModelType]):
             self._response = await client.aio.models.generate_content(
                 model=model_to_use, contents=contents, config=config
             )
-            await client.aio.files.delete(name=files[0].name)
-            logger.info(f"[hcaptcha-gemini-cleanup] Deleted file: {files[0].name}")
+            try:
+                await client.aio.files.delete(name=files[0].name)
+                logger.info(f"[hcaptcha-gemini-cleanup] Deleted file: {files[0].name}")
+            except Exception as e:
+                logger.error(f"Error deleting file: {files[0].name} - {e}")
             return ImageBinaryChallenge(**extract_first_json_block(self._response.text))
 
         # Handle models that support JSON response schema
@@ -124,8 +127,11 @@ class ImageClassifier(_Reasoner[SCoTModelType]):
         self._response = await client.aio.models.generate_content(
             model=model_to_use, contents=contents, config=config
         )
-        await client.aio.files.delete(name=files[0].name)
-        logger.info(f"[hcaptcha-gemini-cleanup] Deleted file: {files[0].name}")
+        try:
+            await client.aio.files.delete(name=files[0].name)
+            logger.info(f"[hcaptcha-gemini-cleanup] Deleted file: {files[0].name}")
+        except Exception as e:
+            logger.error(f"Error deleting file: {files[0].name} - {e}")
         if _result := self._response.parsed:
             return ImageBinaryChallenge(**self._response.parsed.model_dump())
         return ImageBinaryChallenge(**extract_first_json_block(self._response.text))

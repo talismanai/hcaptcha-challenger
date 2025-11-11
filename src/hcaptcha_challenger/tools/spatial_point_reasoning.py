@@ -112,9 +112,12 @@ class SpatialPointReasoner(_Reasoner[SCoTModelType]):
             self._response = await client.aio.models.generate_content(
                 model=model_to_use, contents=contents, config=config
             )
-            await client.aio.files.delete(name=files[0].name)
-            await client.aio.files.delete(name=files[1].name)
-            logger.info(f"[hcaptcha-gemini-cleanup] Deleted files: {files[0].name}, {files[1].name}")
+            try:
+                await client.aio.files.delete(name=files[0].name)
+                await client.aio.files.delete(name=files[1].name)
+                logger.info(f"[hcaptcha-gemini-cleanup] Deleted files: {files[0].name}, {files[1].name}")
+            except Exception as e:
+                logger.error(f"[hcaptcha-gemini-cleanup] Error deleting files: {files[0].name}, {files[1].name} - {e}")
             return ImageAreaSelectChallenge(**extract_first_json_block(self._response.text))
 
         config.response_mime_type = "application/json"
@@ -124,9 +127,12 @@ class SpatialPointReasoner(_Reasoner[SCoTModelType]):
         self._response = await client.aio.models.generate_content(
             model=model_to_use, contents=contents, config=config
         )
-        await client.aio.files.delete(name=files[0].name)
-        await client.aio.files.delete(name=files[1].name)
-        logger.info(f"[hcaptcha-gemini-cleanup] Deleted files: {files[0].name}, {files[1].name}")
+        try:
+            await client.aio.files.delete(name=files[0].name)
+            await client.aio.files.delete(name=files[1].name)
+            logger.info(f"[hcaptcha-gemini-cleanup] Deleted files: {files[0].name}, {files[1].name}")
+        except Exception as e:
+            logger.error(f"[hcaptcha-gemini-cleanup] Error deleting files: {files[0].name}, {files[1].name} - {e}")
         if _result := self._response.parsed:
             return ImageAreaSelectChallenge(**self._response.parsed.model_dump())
         return ImageAreaSelectChallenge(**extract_first_json_block(self._response.text))
