@@ -108,6 +108,8 @@ class ChallengeClassifier(_Reasoner[FastShotModelType]):
                 ),
             )
             # Extract and parse JSON from text response
+            await client.aio.files.delete(name=files[0].name)
+            logger.info(f"[hcaptcha-gemini-cleanup] Deleted file: {files[0].name}")
             return ChallengeTypeEnum(self._response.text)
 
         # Handle models that support JSON response schema
@@ -130,6 +132,8 @@ class ChallengeClassifier(_Reasoner[FastShotModelType]):
         )
 
         # Return parsed response as ImageBinaryChallenge object
+        await client.aio.files.delete(name=files[0].name)
+        logger.info(f"[hcaptcha-gemini-cleanup] Deleted file: {files[0].name}")
         return ChallengeTypeEnum(self._response.text)
 
 
@@ -177,6 +181,8 @@ class ChallengeRouter(_Reasoner[FastShotModelType]):
         self._response = await client.aio.models.generate_content(
             model=model_to_use, contents=contents, config=config
         )
+        await client.aio.files.delete(name=files[0].name)
+        logger.info(f"[hcaptcha-gemini-cleanup] Deleted file: {files[0].name}")
         if _result := self._response.parsed:
             return ChallengeRouterResult(**self._response.parsed.model_dump())
         return ChallengeRouterResult(**extract_first_json_block(self._response.text))

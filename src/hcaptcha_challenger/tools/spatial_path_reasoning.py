@@ -99,6 +99,11 @@ async def draw_speculative_sampling_parts(
     parts.append(types.Part.from_text(text=user_prompt))
 
     logger.debug(f"User prompt: {user_prompt}")
+    await client.aio.files.delete(name=files[0].name)
+    await client.aio.files.delete(name=files[1].name)
+    await client.aio.files.delete(name=files[2].name)
+    await client.aio.files.delete(name=files[3].name)
+    logger.info(f"[hcaptcha-gemini-cleanup] Deleted files: {files[0].name}, {files[1].name}, {files[2].name}, {files[3].name}")
     return parts
 
 
@@ -125,6 +130,9 @@ async def draw_thoughts_parts(
     else:
         parts.append(types.Part.from_text(text=USER_PROMPT_1022))
 
+    await client.aio.files.delete(name=files[0].name)
+    await client.aio.files.delete(name=files[1].name)
+    logger.info(f"[hcaptcha-gemini-cleanup] Deleted files: {files[0].name}, {files[1].name}")
     return parts
 
 
