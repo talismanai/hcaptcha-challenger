@@ -72,6 +72,15 @@ class GeminiProvider:
         upload_tasks = [self.client.aio.files.upload(file=f) for f in valid_files]
         return list(await asyncio.gather(*upload_tasks))
 
+    async def _delete_uploaded_files(self, files: list[types.File]) -> None:
+        """Delete uploaded files from Gemini storage after use."""
+        for f in files:
+            try:
+                await self.client.aio.files.delete(name=f.name)
+                logger.info(f"[hcaptcha-gemini-cleanup] Deleted file: {f.name}")
+            except Exception as e:
+                logger.error(f"[hcaptcha-gemini-cleanup] Error deleting {f.name}: {e}")
+
     @staticmethod
     def _files_to_parts(files: List[types.File]) -> List[types.Part]:
         """Convert uploaded files to parts."""
@@ -120,47 +129,50 @@ class GeminiProvider:
         """
         # Upload files
         uploaded_files = await self._upload_files(images)
-        parts = self._files_to_parts(uploaded_files)
+        try:
+            parts = self._files_to_parts(uploaded_files)
 
-        # Add user prompt if provided
-        if user_prompt and isinstance(user_prompt, str):
-            parts.append(types.Part.from_text(text=user_prompt))
+            # Add user prompt if provided
+            if user_prompt and isinstance(user_prompt, str):
+                parts.append(types.Part.from_text(text=user_prompt))
 
-        contents = [types.Content(role="user", parts=parts)]
+            contents = [types.Content(role="user", parts=parts)]
 
-        # Build config
-        config = types.GenerateContentConfig(
-            system_instruction=description,
-            media_resolution=types.MediaResolution.MEDIA_RESOLUTION_HIGH,
-            response_mime_type="application/json",
-            response_schema=response_schema,
-        )
-
-        # Set thinking config if applicable
-        self._set_thinking_config(config=config)
-
-        # Generate response
-        self._response: types.GenerateContentResponse = (
-            await self.client.aio.models.generate_content(
-                model=self._model, contents=contents, config=config
+            # Build config
+            config = types.GenerateContentConfig(
+                system_instruction=description,
+                media_resolution=types.MediaResolution.MEDIA_RESOLUTION_HIGH,
+                response_mime_type="application/json",
+                response_schema=response_schema,
             )
-        )
 
-        # Parse response
-        if self._response.parsed:
-            parsed = self._response.parsed
-            if isinstance(parsed, BaseModel):
-                return response_schema(**parsed.model_dump())
-            if isinstance(parsed, dict):
-                return response_schema(**cast(dict[str, object], parsed))
+            # Set thinking config if applicable
+            self._set_thinking_config(config=config)
 
-        # Fallback to JSON extraction
-        if response_text := self._response.text:
-            json_data = extract_first_json_block(response_text)
-            if json_data:
-                return response_schema(**json_data)
+            # Generate response
+            self._response: types.GenerateContentResponse = (
+                await self.client.aio.models.generate_content(
+                    model=self._model, contents=contents, config=config
+                )
+            )
 
-        raise ValueError(f"Failed to parse response: {response_text}")
+            # Parse response
+            if self._response.parsed:
+                parsed = self._response.parsed
+                if isinstance(parsed, BaseModel):
+                    return response_schema(**parsed.model_dump())
+                if isinstance(parsed, dict):
+                    return response_schema(**cast(dict[str, object], parsed))
+
+            # Fallback to JSON extraction
+            if response_text := self._response.text:
+                json_data = extract_first_json_block(response_text)
+                if json_data:
+                    return response_schema(**json_data)
+
+            raise ValueError(f"Failed to parse response: {response_text}")
+        finally:
+            await self._delete_uploaded_files(uploaded_files)
 
     def cache_response(self, path: Path) -> None:
         """Cache the last response to a file."""
