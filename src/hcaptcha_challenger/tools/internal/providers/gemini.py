@@ -74,12 +74,17 @@ class GeminiProvider:
 
     async def _delete_uploaded_files(self, files: list[types.File]) -> None:
         """Delete uploaded files from Gemini storage after use."""
-        for f in files:
+        if not files:
+            return
+
+        async def _delete_one(f: types.File) -> None:
             try:
                 await self.client.aio.files.delete(name=f.name)
                 logger.info(f"[hcaptcha-gemini-cleanup] Deleted file: {f.name}")
             except Exception as e:
                 logger.error(f"[hcaptcha-gemini-cleanup] Error deleting {f.name}: {e}")
+
+        await asyncio.gather(*[_delete_one(f) for f in files])
 
     @staticmethod
     def _files_to_parts(files: List[types.File]) -> List[types.Part]:
