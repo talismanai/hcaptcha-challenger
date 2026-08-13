@@ -106,14 +106,9 @@ def _create_adaptive_contrast_grid(
     plt.tight_layout()
 
     fig.canvas.draw()
-    # Get the RGBA buffer from the figure
-    buf = fig.canvas.buffer_rgba()  # type: ignore[attr-defined]
-    img_with_grid = np.frombuffer(buf, dtype=np.uint8)
-    img_with_grid = img_with_grid.reshape(fig.canvas.get_width_height()[::-1] + (4,))
-
+    rgba = np.asarray(fig.canvas.buffer_rgba()).copy()
     plt.close(fig)
-
-    img_with_grid = cv2.cvtColor(img_with_grid, cv2.COLOR_RGBA2RGB)
+    img_with_grid = cv2.cvtColor(rgba, cv2.COLOR_RGBA2RGB)
 
     return img_with_grid
 
@@ -215,17 +210,9 @@ def create_coordinate_grid(
     # Tight layout
     plt.tight_layout()
 
-    # Convert matplotlib figure to numpy array
     fig.canvas.draw()
-    # Get the RGBA buffer from the figure
-    buf = fig.canvas.buffer_rgba()  # type: ignore[attr-defined]
-    img_with_grid = np.frombuffer(buf, dtype=np.uint8)
-    img_with_grid = img_with_grid.reshape(fig.canvas.get_width_height()[::-1] + (4,))
-
-    # Close the figure to free memory
+    rgba = np.asarray(fig.canvas.buffer_rgba()).copy()
     plt.close(fig)
-
-    # Convert RGBA to RGB
-    img_with_grid = cv2.cvtColor(img_with_grid, cv2.COLOR_RGBA2RGB)
+    img_with_grid = cv2.cvtColor(rgba, cv2.COLOR_RGBA2RGB)
 
     return img_with_grid
